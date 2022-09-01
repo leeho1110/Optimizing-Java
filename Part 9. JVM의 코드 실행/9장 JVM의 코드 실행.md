@@ -51,7 +51,30 @@
         - 하지만 런타임에 기계어로 컴파일하기 때문에 CPU 자원 소모가 동반됩니다.
 
 ---
+
+### Hotspot JIT Basic
+
+- 핫스팟은 기본적으로 **전체 메서드**를 컴파일 단위로 삼습니다. 메서드 하나에 해당되는 바이트 코드가 기계어로 컴파일 되며 이 작업은 컴파일러 스레드가 수행합니다. 컴파일 대상 메서드를 찾는 프로파일링 스레드도 존재합니다.
+    - JVM 내부에는 일반적인 애플리케이션 스레드와 같은 스레드이지만, 별도의 목적을 갖는 스레드들이 존재합니다.
+        - VM Thread
+        - Periodic task thread
+        - GC threads
+        - Compiler threads
+        - Signal dispatcher thread
+- Hotspot JVM 내부에는 C1, C2라는 두 개의 JIT 컴파일러가 존재합니다. 각각 클라이언트 컴파일러, 서버 컴파일러로 불립니다. Java 10부터는 C2의 대안으로 Graal JIT 컴파일러가 등장했습니다.
+    - 인터프리티드 단계에서 수집한 프로파일링 정보를 토대로 최적화 로직을 적용합니다. 본문에서는 최적화 로직 이전에 내부 표현형(representation)을 생성한다고 적혀있는데요. 정확하게 어떤 것을 의미하는지 검색을 열심히 해봐도 찾기 힘들었습니다. 중요한 것은 두 컴파일러가 생성한 내부 표현형이 다르다는 것입니다.
+- Java 6부터는 인터프리터 모드에서 바이트코드를 컴파일할 때 **단계별 컴파일 모드**를 지원하며, Java 8부터는 디폴트로 활성화되어 있습니다. 인터프리터로만 코드를 컴파일하다가 이를 C1를 사용하도록, C2를 사용하도록 진화시킨다고 이해하시면 됩니다.
+    - 이렇게 컴파일된 코드는 Off-heap의 **코드 캐시**라는 영역에 저장됩니다. 해당 영역은 크기가 고정되어 확장이 불가능하기 때문에 영역이 꽉차면 더이상의 JIT 컴파일이 불가능합니다. 따라서 네이티브 코드가 제거될 때마다 스위퍼 프로세스가 사용가능한 블록을 프리 리스트에 추가시켜 줍니다.
+    - Java 9부터는 네이티브 코드 유형마다 별도로 저장할 수 있도록 코드 캐시 영역이 세 개의 영역으로 나눠집니다. 코드 지역성을 개선하고 메모리 단편화 현상을 줄이는 데에 도움을 줍니다.
+        - JVM 내부 코드를 저장하는 non-method segment(디폴트 5MB)
+        - 짧은 수명을 갖는 C1 컴파일드 코드를 저장하는 profiled-code segment(디폴트 약 122BM)
+        - 긴 수명을 갖는 C2 컴파일드 코드를 저장하는 non-profiled segment(디폴트 약 122MB)
+    - 네이티브 코드는 역최적화(예상한 최적화 결과가 틀렸을 때), 위에서 말한 컴파일 실행 레벨이 바뀌었을 때, 클래스가 언로딩될 때 제거됩니다.
+
+---
+
 ### 참고자료
 
 - [https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool)
 - [https://blog.jamesdbloom.com/JVMInternals.html#constant_pool](https://blog.jamesdbloom.com/JVMInternals.html#constant_pool)
+- [https://www.baeldung.com/jvm-tiered-compilation](https://www.baeldung.com/jvm-tiered-compilation)
