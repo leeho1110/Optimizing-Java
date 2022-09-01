@@ -1,0 +1,44 @@
+# 9장: JVM의 코드 실행
+
+### 개요
+
+이번 장에서는 JVM이 어떻게 코드를 실행시키는지 알아보겠습니다.
+
+---
+
+### 바이트코드를 해석하는 법
+
+- JVM은 일반적인 하드웨어 CPU와 다르게 계산의 결과값을 보관하는 레지스터가 없습니다. 따라서 메서드별로 생성되는 스택 프레임 내부에 저장합니다.
+    - x와 1+3을 비교하는 로직을 가정하겠습니다.
+        - 인터프리터는 x, 1, 3을 순서대로 넣습니다.
+        - 상단의 1과 3을 더한 뒤 결과값을 다시 스택에 넣습니다.
+        - 최상단 4와 x를 비교합니다.
+
+---
+
+### 바이트코드 개요
+
+- 스택에 들어가는 옵코드(operation code)는 1바이트로 표현됩니다. 이것이 바이트코드라고 불리는 이유입니다.
+    - 총 256개 지정이 가능하며 자주 사용하는 `load` 같은 옵코드 종류는 단축형을 통해 인수 바이트 공간을 절약할 수 있습니다.
+- 데이터를 가져오고(load) 저장(store)하는 카테고리의 옵코드를 확인해봅시다. 여기서 사용되는 옵코드는 1바이트, 옵코드의 인수는 상수 풀 인덱스로 2바이트를 차지합니다. 괄호 안의 인수는 앞서 말한 단축형을 지닌 옵코드가 있다는 것을 의미합니다. 어려우니 신경쓰지 않으셔도 됩니다.
+    
+    
+    | 패밀리 명 | 인수 | 설명 |
+    | --- | --- | --- |
+    | load | (i1) | 지역 변수 i1 값을 스택에 로드합니다. 더하기 혹은 특정 연산을 위해 값을 가져오기 위한 옵코드입니다. |
+    | store | (i1) | 스택 상단 값을 지역 변수 i1에 저장합니다. 연산 결과값을 다시 지역 변수에 저장하기 위한 옵코드입니다. |
+    | ldc | c1 | 클래스 상수 풀(Class Constant Pool)의 c1번째 CP_info를 스택에 로드합니다. 
+    
+    ex. ldc #10 → Constant Pool 내부의 10번째 CP_info를 로드하라는 의미입니다. |
+    | const |  | 단순 상숫값을 스택에 로드합니다. 위의 ldc에서 로드하는 상수 풀의 상수와 단순 상수값은 다릅니다. |
+    | pop |  | 스택 상단에서 값을 제거합니다. |
+    | dup |  | 스택 상단에서 값을 복제합니다. |
+    | getField | c1 | 스택 상단에 위치한 객체에서 Constant Pool 내부 c1이 가리키는 필드명을 찾고 그 값을 스택에 로드합니다. |
+    | putField | c1 | 스택 상단 값을 Constant Pool 내부 c1이 가리키는 필드에 저장합니다. |
+
+---
+
+### 참고자료
+
+- [https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool](https://blogs.oracle.com/javamagazine/post/java-class-file-constant-pool)
+- [https://blog.jamesdbloom.com/JVMInternals.html#constant_pool](https://blog.jamesdbloom.com/JVMInternals.html#constant_pool)
