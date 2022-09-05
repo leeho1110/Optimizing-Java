@@ -31,3 +31,9 @@
     - 앞서 자바 메서드가 호출되는 경우 스택 프레임이 생성된다고 말했습니다. 여기서 만약 네이티브 메서드를 수행하는 경우 Native Stack에 새로운 스택 프레임이 생성되어 푸시된 뒤 메서드가 수행됩니다. 수행이 완료되면 네이티브 메서드를 수행한 스택 프레임으로 돌아가지 않고 **새로운 스택 프레임을 생성**해 작업을 수행합니디ㅏ.
     - 이 때 각 스레드별 스택의 크기는 동적일수도 고정될수도 있스빈다. 만약 스레드에 허용된 스택의 크기보다 더 큰 공간이 필요한 경우 StackOverflowError 예외가 발생합니다.
     - 만약 스레드에 새로운 프레임이 필요하지만 만약 이를 할당할 메모리가 없는 경우라면 OutOfMemoryError 예외가 발생합니다.
+- Frame
+    - 스택에 추가되는 스택 프레임은 내부적으로 아래와 같은 값들을 갖습니다.
+        - Local variable array
+        - Return value
+        - Operand stack
+        - Reference to runtime constant pool for class of the current method(현재 메서드가 선언된 클래스에 대한 런타임 상수 풀에 대한 참조)
