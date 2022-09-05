@@ -140,3 +140,59 @@
         - JVM은 어쨌든 처음 사용될 때 분석(resolution)이 일어난 것처럼 동작해야하며 이 시점에 resolution 에러가 발생합니다.
             - 바인딩 작업은 심볼릭 참조로 식별되는 필드, 메서드, 클래스가 다이렉트 주소로 변환되는 작업을 의미합니다. 이 작업은 심볼릭 링크가 실제 다이렉트 주소로 변환되는 과정 후에는 다시 돌아갈 수 없기 때문에 반드시 딱 한번만 일어나야 합니다.
             - 각 다이렉트 주소들은 변수 혹은 메서드의 런타임 위치와 연결된 저장 구조체에 대한 **오프셋**으로 저장됩니다.
+
+---
+
+### Shared Between Threads
+
+- 힙 영역
+- Memory Management
+    - JVM에서 메모리는 절대 개발자가 명시적으로 할당 해제되지 않습니다. 대신 가비지 컬렉터가 자동으로 회수합니다.
+- Non-Heap(Off Heap) Memory
+    - Permanent Generation(~Java 7) 혹은 Metaspace(Java 8+)
+        - 이전 PermGen은 JVM에 의해서 크기가 강제되던 영역이었습니다. 하지만 Metatspace는 Native Memory로 OS가 자동으로 혹은 옵션을 통해 크기를 조절하도록 변경됐습니다. 이를 통해 예전 PermGen에서 발생하던 OOM 에러의 가능성이 더 낮아졌습니다.
+        - Method area
+        - interend strings
+        - PermGen과 Metaspace가 저장하는 데이터의 종류
+            
+            
+            |  | Java 7 (PermGen → Heap, Hotspot 관리대상 O) | Java 8 (Metaspace → Native Memory(Off heap), Hotspot 관리대상 X) |
+            | --- | --- | --- |
+            | Class Metadata | O | O |
+            | Method Metadata | O | O |
+            | Interend String | O (GC 대상) | Java Heap 영역으로 이동 (GC 대상) |
+            | Static Object 변수, 상수 | O | Java Heap 영역으로 이동 (GC 대상) |
+    - Code Cache
+        - JIT 컴파일러에 의해 네이티브 코드로 변환된 메서드의 저장과 컴파일에 사용되는 곳입니다.
+- 클래스별로 Method area에 저장되는 데이터 종류 (Java 7 기준)입니다. 이 영역은 모든 스레드가 공유하는 자원이므로 두 스레드가 만약 로드되지 않은 클래스의 필드나 메서드에 접근하는 경우 반드시 한 번만 로드되어야 합니다.
+    - **Classloader Reference**
+    - **Run Time Constant Pool**
+        - Numeric constants
+        - Field references
+        - Method References
+        - Attributes
+    - **Field data**
+        - Per field
+            - Name
+            - Type
+            - Modifiers
+            - Attributes
+    - **Method data**
+        - Per method
+            - Name
+            - Return Type
+            - Parameter Types (in order)
+            - Modifiers
+            - Attributes
+    - **Method code**
+        - Per method
+            - Bytecodes
+            - Operand stack size
+            - Local variable size
+            - Local variable table
+            - Exception table
+                - Per exception handler
+                    - Start point
+                    - End point
+                    - PC offset for handler code
+                    - Constant pool index for exception class being caught
