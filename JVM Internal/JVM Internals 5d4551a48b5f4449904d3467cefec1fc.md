@@ -43,3 +43,100 @@
         - 64비트의 크기를 갖는 long, double 자료형(2개의 슬롯을 차지)을 제외한 나머지는 하나의 슬롯을 차지합니다.
     2. Operand stack
         - 바이트코드 인스트럭션의 실행동안 일반적인 CPU에서 레지스터가 사용되는 방식과 비슷하게 사용됩니다.
+    3. Dynamic Linking
+        - 메서드 실행 시 생기는 스택에는 스택 프레임이 쌓이고, 프레임은 런타임 상수 풀에 대한 참조값을 갖고 있습니다. 각 참조값들을 클래스 파일이 보유한 클래스 상수 풀을 가리키며 이는 다이나믹 링킹을 가능하도록 합니다.
+        - C/C++ 코드는 일반적으로 개체 파일로 컴파일된 다음 여러 개체 파일이 함께 연결되어 실행 파일이나 dll과 같은 사용 가능한 구조체를 생성합니다. 링킹 단계에서 각 객체 파일의 심볼릭 참조는 최종 실행 파일에 상대적인 실제 메모리 주소로 대체됩니다.
+        - 자바 클래스가 컴파일 뒤 갖게 되는 `ldc #3`, `invokevirtual #4` 와 같은 메서드나 변수에 대한 참조는 실제 메모리 주소가 아닌 클래스 상수 풀에 있는 심볼릭 링크입니다. 아래 예시 코드와 바이트코드를 확인하면 실제 메모리 주소 없이 모두 클래스 파일의 상수 풀에 대한 심볼릭 참조로 대체되어 있습니다.
+            - 예시 코드와 `javap -v -p -s -sysinfo -constants classes/org/jvminternals/SimpleClass.class` 명령어로 확인한 바이트 코드입니다.
+                - 예시 코드
+                    
+                    ```java
+                    package org.jvminternals;
+                    
+                    public class SimpleClass {
+                    
+                        public void sayHello() {
+                            System.out.println("Hello");
+                        }
+                    
+                    }
+                    ```
+                    
+                - 바이트코드
+                    
+                    ```java
+                    public class org.jvminternals.SimpleClass
+                      SourceFile: "SimpleClass.java"
+                      minor version: 0
+                      major version: 51
+                      flags: ACC_PUBLIC, ACC_SUPER
+                    Constant pool:
+                       #1 = Methodref          #6.#17         //  java/lang/Object."<init>":()V
+                       #2 = Fieldref           #18.#19        //  java/lang/System.out:Ljava/io/PrintStream;
+                       #3 = String             #20            //  "Hello"
+                       #4 = Methodref          #21.#22        //  java/io/PrintStream.println:(Ljava/lang/String;)V
+                       #5 = Class              #23            //  org/jvminternals/SimpleClass
+                       #6 = Class              #24            //  java/lang/Object
+                       #7 = Utf8               <init>
+                       #8 = Utf8               ()V
+                       #9 = Utf8               Code
+                      #10 = Utf8               LineNumberTable
+                      #11 = Utf8               LocalVariableTable
+                      #12 = Utf8               this
+                      #13 = Utf8               Lorg/jvminternals/SimpleClass;
+                      #14 = Utf8               sayHello
+                      #15 = Utf8               SourceFile
+                      #16 = Utf8               SimpleClass.java
+                      #17 = NameAndType        #7:#8          //  "<init>":()V
+                      #18 = Class              #25            //  java/lang/System
+                      #19 = NameAndType        #26:#27        //  out:Ljava/io/PrintStream;
+                      #20 = Utf8               Hello
+                      #21 = Class              #28            //  java/io/PrintStream
+                      #22 = NameAndType        #29:#30        //  println:(Ljava/lang/String;)V
+                      #23 = Utf8               org/jvminternals/SimpleClass
+                      #24 = Utf8               java/lang/Object
+                      #25 = Utf8               java/lang/System
+                      #26 = Utf8               out
+                      #27 = Utf8               Ljava/io/PrintStream;
+                      #28 = Utf8               java/io/PrintStream
+                      #29 = Utf8               println
+                      #30 = Utf8               (Ljava/lang/String;)V
+                    {
+                      public org.jvminternals.SimpleClass();
+                        Signature: ()V
+                        flags: ACC_PUBLIC
+                        Code:
+                          stack=1, locals=1, args_size=1
+                            0: aload_0
+                            1: invokespecial #1    // Method java/lang/Object."<init>":()V
+                            4: return
+                          LineNumberTable:
+                            line 3: 0
+                          LocalVariableTable:
+                            Start  Length  Slot  Name   Signature
+                              0      5      0    this   Lorg/jvminternals/SimpleClass;
+                    
+                      public void sayHello();
+                        Signature: ()V
+                        flags: ACC_PUBLIC
+                        Code:
+                          stack=2, locals=1, args_size=1
+                            0: getstatic      #2    // Field java/lang/System.out:Ljava/io/PrintStream;
+                            3: ldc            #3    // String "Hello"
+                            5: invokevirtual  #4    // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+                            8: return
+                          LineNumberTable:
+                            line 6: 0
+                            line 7: 8
+                          LocalVariableTable:
+                            Start  Length  Slot  Name   Signature
+                              0      9      0    this   Lorg/jvminternals/SimpleClass;
+                    }
+                    ```
+                    
+        - JVM 구현체는 심볼릭 참조를 언제 resolve(실제 메모리 주소로 변환)할지 결정할 수 있습니다.
+            - 즉시 분석 혹은 정적 분석(eager resolution or static resolution): 클래스 파일이 로드된 뒤 검증(verified)될 때
+            - 지연 분석 (lzay resolution or late resolution): 심볼릭 참조가 실제로 호출되어 사용될 때
+        - JVM은 어쨌든 처음 사용될 때 분석(resolution)이 일어난 것처럼 동작해야하며 이 시점에 resolution 에러가 발생합니다.
+            - 바인딩 작업은 심볼릭 참조로 식별되는 필드, 메서드, 클래스가 다이렉트 주소로 변환되는 작업을 의미합니다. 이 작업은 심볼릭 링크가 실제 다이렉트 주소로 변환되는 과정 후에는 다시 돌아갈 수 없기 때문에 반드시 딱 한번만 일어나야 합니다.
+            - 각 다이렉트 주소들은 변수 혹은 메서드의 런타임 위치와 연결된 저장 구조체에 대한 **오프셋**으로 저장됩니다.
