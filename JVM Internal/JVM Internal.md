@@ -242,3 +242,102 @@
 - Method area
     - Java 7 SE에서 메서드 영역은 논리적으로 힙의 일부이지만 간단한 구현은 가비지 수집 또는 압축을 선택하지 않을 수 있다고 언급되어 있습니다.
     - 반대로 Oracle JVM용 jconsole에서는 메서드 영역(및 코드 캐시)이 힙이 아닌 것으로 표시됩니다. OpenJDK 코드는 CodeCache가 ObjectHeap에 대한 VM의 별도 필드임을 보여줍니다.
+
+---
+
+### Runtime Constant Pool
+
+- JVM은 클래스(본문에선 type)별로 런타임 시점에 심볼 테이블과 유사한 자료구조인 상수 풀을 유지합니다. Java의 바이트 코드는 데이터(클래스에 대한 메서드 참조 및 여러가지)를 필요로 합니다.
+- 하지만 필요한 데이터가 너무 커서 바이트 코드에 직접 저장할 수 없는 경우가 종종 있습니다. 따라서 이러한 **데이터는 상수 풀에 저장**하고 ****바이트 코드에서는 **데이터가 저장된 상수 풀에 대한 참조를 포함하는 방식**으로 작동합니다.
+    - 상수 풀에 저장되는 데이터의 종류는 아래와 같습니다.
+        - numeric literals
+        - string literals
+        - class references
+        - field references
+        - method references
+    - 아래는 예시 코드입니다.
+        
+        ```java
+        // java sourace code
+        Object foo = new Object();
+        
+        // compiled bytecode
+        0: 	new #2 		    // Class java/lang/Object
+        1:	dup
+        2:	invokespecial #3    // Method java/ lang/Object "<init>"( ) V
+        ```
+        
+        - 여기 핵심은 new 연산자가 상수 풀의 2번째 인덱스에 대해 수행된다는 점입니다. 상수 풀의 #2는 위에서 언급한 class reference이며, 이어서 차례대로 UTF-8 문자열로 클래스 이름을 포함하는 상수 풀 인덱스로 연결됩니다. 그런 다음 이 심볼릭 링크를 사용해 java.lang.Object에 대한 클래스 조회가 가능합니다.
+        - #2에는 `[2] CONSTANT_Class_info` 가 저장되고 내부 Class name 항목에 다른 인덱스가 참조되어 있겠죠.
+        - 다른 인덱스는 `[93] CONSTANT_Utf8_info` 형태로 내부에 String, Length of byte, Length of string 값이 저장되어 있을겁니다.
+    - 소스 코드에서 어떤 상수 풀이 생성되는지 알아봅니다.
+        - 예시 코드
+            
+            ```java
+            // java sourace code
+            package org.jvminternals;
+            
+            public class SimpleClass {
+            
+                public void sayHello() {
+                    System.out.println("Hello");
+                }
+            
+            }
+            
+            // Constant pool:
+            Constant pool:
+            		#1 = Methodref          #6.#17         //  java/lang/Object."<init>":()V
+            		#2 = Fieldref           #18.#19        //  java/lang/System.out:Ljava/io/PrintStream;
+            		#3 = String             #20            //  "Hello"
+            		#4 = Methodref          #21.#22        //  java/io/PrintStream.println:(Ljava/lang/String;)V
+            		#5 = Class              #23            //  org/jvminternals/SimpleClass
+            		#6 = Class              #24            //  java/lang/Object
+            		#7 = Utf8               <init>
+            		#8 = Utf8               ()V
+            		#9 = Utf8               Code
+            		#10 = Utf8               LineNumberTable
+            		#11 = Utf8               LocalVariableTable
+            		#12 = Utf8               this
+            		#13 = Utf8               Lorg/jvminternals/SimpleClass;
+            		#14 = Utf8               sayHello
+            		#15 = Utf8               SourceFile
+            		#16 = Utf8               SimpleClass.java
+            		#17 = NameAndType        #7:#8          //  "<init>":()V
+            		#18 = Class              #25            //  java/lang/System
+            		#19 = NameAndType        #26:#27        //  out:Ljava/io/PrintStream;
+            		#20 = Utf8               Hello
+            		#21 = Class              #28            //  java/io/PrintStream
+            		#22 = NameAndType        #29:#30        //  println:(Ljava/lang/String;)V
+            		#23 = Utf8               org/jvminternals/SimpleClass
+            		#24 = Utf8               java/lang/Object
+            		#25 = Utf8               java/lang/System
+            		#26 = Utf8               out
+            		#27 = Utf8               Ljava/io/PrintStream;
+            		#28 = Utf8               java/io/PrintStream
+            		#29 = Utf8               println
+            		#30 = Utf8               (Ljava/lang/String;)V
+            ```
+            
+        - 상수 풀에 선언된 상수들은 어떤 타입들을 갖고 있을까요?
+            1. `Integer` :  4byte int 상수
+            2. `Long` : 8byte Long 상수
+            3. `Float` : 4byte float 상수
+            4. `Double` : 8byte double 상수
+            5. `String` : 실제 바이트를 포함하는 상수 풀의 다른 UTF-8 항목을 가리키는 문자열 상수
+            6. `UTF-8` : UTF-8로 인코딩된 문자 시퀀스를 나타내는 바이트 스트림
+            7. `Class` : 내부 JVM 포맷 안에서의 클래스 풀네임(fully qualified class name)을 포함한 상수 풀의 항목을 가리키는 클래스 상수입니다. 이는 다이나믹 링킹 프로세스에서 이용됩니다.
+            8. `NameAndType` : ‘:’ 기호를 기준으로 상수 풀의 각각 다른 항목을 가리킵니다. 첫 번째 값은 메서드나 필드명을 담고 있는 UTF-8 상수를 가리킵니다. 두 번째 값은 클래스를 가리키는 UTF-8 상수를 가리킵니다. 만약 앞이 필드라면 정규화된 클래스 이름이며, 메서드인 경우는 파라미터별 클래스 풀네임이 나옵니다.
+                - ex. *println(메서드명):(Ljava/lang/String;)V →* 만약 인자가 String, Long 타입이었다면 뒤에 Long 타입의 클래스 풀네임이 추가
+            9. `Fieldref` , `Methodref` , `InterfaceMethodref` : 상수 풀의 다른 항목을 각각 가리키는 점으로 구분된 값 쌍입니다. 첫 번째 값(점 앞)은 클래스 항목을 가리킵니다. 두 번째 값은 NameAndType 항목을 가리킵니다.
+                - Fieldref → *java/lang/System.out:Ljava/io/PrintStream;*
+                - Methodref → *java/io/PrintStream.println:(Ljava/lang/String;)V*
+
+------
+
+### *Ref*
+
+- [https://openjdk.org/jeps/122](https://openjdk.org/jeps/122)
+- [https://johngrib.github.io/wiki/java8-why-permgen-removed/](https://johngrib.github.io/wiki/java8-why-permgen-removed/)
+- [https://blog.jamesdbloom.com/JVMInternals.html#constant_pool](https://blog.jamesdbloom.com/JVMInternals.html#constant_pool)
+- [https://www.geeksforgeeks.org/classloader-in-java/](https://www.geeksforgeeks.org/classloader-in-java/)
