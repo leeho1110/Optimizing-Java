@@ -196,3 +196,49 @@
                     - End point
                     - PC offset for handler code
                     - Constant pool index for exception class being caught
+
+---
+
+### Class Loader
+
+- Loading
+    - 특정 이름을 가진 클래스 또는 인터페이스 유형을 나타내는 클래스 파일을 찾고 이를 byte 배열로 읽는 과정입니다.
+    - 읽은 뒤에는 정확한 메이저, 마이너 버전을 갖는지와 클래스 객체를 제대로 표현하는지를 확인하기 위해 파싱 과정을 거칩니다.
+    - 슈퍼 클래스로 명명된 모든 클래스와 인터페이스가 로드되고, 위 작업들이 완료되면 바이너리 표현식으로부터의 클래스 및 인터페이스 객체 생성이 완료됩니다.
+    - 로드된 모든 클래스에는 해당 클래스를 로드한 클래스 로더에 대한 참조가 포함됩니다. 차례로 클래스 로더는 로드한 모든 클래스에 대한 참조도 포함합니다.
+- Linking
+    - 클래스 또는 인터페이스, 그의 다이렉트 슈퍼 클래스와 슈퍼 인터페이스를 검증하고 준비하는 과정입니다. 링킹은 verifying, preparing, 선택적으로 resolving의 세 단계를 거칩니다.
+    - Verifying
+        - 클래스와 인터페이스 표현이 구조적으로 올바른지, JVM과 Java 프로그래밍의 의미적 요구사항을 준수하는지 검증합니다.
+        - 의미적 요구사항은 아래와 같습니다.
+            1. consistent and correctly formatted symbol table
+            2. final methods / classes not overridden
+            3. methods respect access control keywords
+            4. methods have correct number and type of parameters
+            5. bytecode doesn't manipulate stack incorrectly
+            6. variables are initialized before being read
+            7. variables are a value of the correct type
+        - 위 작업들을 verfiying 단계에서 검증하기 때문에 런타임에선 위 항목들에 대한 검사가 필요하지 않습니다.
+    - Preparing
+        - 메서드 테이블같은 JVM에 의해 사용되는 구조체, static 데이터 저장공간을 위한 메모리 할당을 포함합니다.
+    - Resolving
+        - 참조된 클래스 또는 인터페이스를 로드하여 기호 참조를 확인하고 참조가 올바른지 확인하는 선택적 단계입니다.
+- Initializing
+    - 클래스 또는 인터페이스의 초기화는 클래스 또는 인터페이스 초기화 메소드 <clinit> 실행으로 구성됩니다.
+    - JVM은 클래스 로딩의 책임을 여러 클래스 로더에게 나눕니다. 각 클래스 로더들은 최상위 클래스 로더인 부트스트랩 클래스 로더를 제외하고 클래스 로딩을 각 상위 클래스 로더들에게 위임하는 형태입니다.
+    - Bootstrap Classloader
+        - JVM이 로드될 때 킥스타터 역할로 가장 먼저 인스턴스화가 되기 때문에 일반적으로 네이티브 코드로 구현되며 자바 클래스가 아닙니다
+        - 퓨어 자바 클래스로더를 로드하는 역할을 수행하며 Java 8까진 rt.jar을 포함한 기본 Java API를 로드하는 역할을 합니다. Java 9부터 rt.jar 및 ext 경로가 삭제되고, 효율성을 위해서 클래스들은 다른 경로로 이동이 되었습니다.\
+    - Extension Classloader
+        - 보안 확장 기능과 같은 표준 Java 확장 API에서 클래스를 로드합니다.
+    - System Classloader
+        - 클래스패스에서 애플리케이션 클래스들을 로드하는 디폴트 애플리케이션 클래스로더입니다.
+    - User Defined Classloaders
+        - 시스템 클래스로더 대신 애플리케이션 클래스 로드하는데 사용될 수 있습니다.
+        - 런타임 로딩을 포함한 케이스나 일반적으로 톰캣과 같은 웹 서버에 필요한 로드된 클래스들 그룹 간의 분리에 사용될 수도 있습니다.
+- Faster Class Loading
+    - CLass Data Sharing이라고 불리는 기능은 Hotspot 5.0부터 소개됐습니다. isntallation 과정 중에 JVM 인스톨러가 JVM 클래스 혹은 rt.jar와 같은 키 셋을 공유 아카이브에 매핑된 메모리 안으로 로드합니다.
+    - CDS는 이러한 클래스를 로드하는 데 걸리는 시간을 줄여 JVM 시작 속도를 개선하고 이러한 클래스를 JVM의 서로 다른 인스턴스 간에 공유할 수 있도록 하여 메모리 공간을 줄입니다.
+- Method area
+    - Java 7 SE에서 메서드 영역은 논리적으로 힙의 일부이지만 간단한 구현은 가비지 수집 또는 압축을 선택하지 않을 수 있다고 언급되어 있습니다.
+    - 반대로 Oracle JVM용 jconsole에서는 메서드 영역(및 코드 캐시)이 힙이 아닌 것으로 표시됩니다. OpenJDK 코드는 CodeCache가 ObjectHeap에 대한 VM의 별도 필드임을 보여줍니다.
