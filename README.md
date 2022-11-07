@@ -19,3 +19,21 @@ JVM에서 적용할 수 있는 가비지 컬렉터의 종류와 내부 동작 �
 이번 서적을 통해 GC에 대해 딥다이브할 수 있었고 난이도가 꽤 어려웠습니다. 만약 GC에 대한 내용을 알고 싶지만, [공식 문서](https://www.oracle.com/webfolder/technetwork/tutorials/obe/java/gc01/index.html)를 읽기 부담스러우시다면 읽어보셔도 좋을 듯 합니다.
 
 ---
+
+### Q&A
+
+- ***Q. GC는 무엇인가요? 왜 필요할까요?***
+    
+    GC는 Garbage Collector의 약자로써 **더 이상 사용(참조)되지 않는 객체들을 메모리에서 제거해 Heap Memory를 재사용할 수 있도록 정리해주는 프로그램**입니다. 자바에서는 개발자가 메모리를 직접 핸들링하지 않습니다. 대신 별도의 프로그램이 메모리를 할당하고 해제하는 작업을 수행합니다. 이 때 ‘해제’의 대상이 되는 더 이상 사용되지 않는 메모리 공간을 Garbage라고 부릅니다. 이러한 Garbage는 말 그대로 쓰레기이기 때문에 Heap 메모리 영역의 재사용을 위해선 반드시 제거되어야 합니다. 그래야 다음에 사용할 데이터들을 적재할 수 있으니까요. 
+    
+    또한 해제,할당 과정에서는 메모리 공간이 정렬되지 않아, 사용 가능한 메모리 공간의 크기가 실제 빈 공간보다 적은 Memory Fragmentation 현상이 나타나는데요. 이런 문제점들도 해결해줍니다. 결국은 **효율적인 메모리 재사용을 위해서 존재**하는 것이죠.
+    
+- ***Q. Garbage Collector에서 Young, Old Memory는 왜 존재할까요? 존재하지 않을수도 있을까요?***
+    
+    Generationl Algorithm은 Weak Generational Hypothesis, 약한 세대 가설에 기반합니다. 새로 새성된 객체 중 아주 짧은 시간만 살아있는 객체가 대부분이고, 만약 살아남는다면 객체의 기대 수명이 매우 길다는 가정을 하는 것이죠. 기대 수명이 짧은 객체들은 빠르게 GC를 통해 메모리 가용성을 높히는 것이 좋습니다. 반면 기대 수명이 긴 객체들은 애플리케이션의 프로세스에 방해가 되지 않도록 효율적으로 처리해야하죠. 객체의 기대 수명에 맞는 작업을 수행할 수 있도록 그 위치를 Young, Survivor, Old 영역으로 나눠 배치하게 된 것입니다. 
+    
+    물론 Garbage First GC, G1 GC부터는 이러한 메모리의 물리적 구분을 없애고 Region 방식을 사용해 배치하게 됩니다. 물리적 구분만 없을 뿐 Generational Algorithm은 존재합니다.
+    
+    - ***Q. Generationl Algorithm은 무엇일까요?***
+        
+        Generational Argorithm은 Heap 영역을 Young, Survivor, Old으로 나눠 GC하는 알고리즘입니다. Heap을 age별로 sub heap으로 나누고 그 중 Youngest generation sub heap을 자주 GC하는 방식이죠. Generationl Algorithm은 각 Sub-heap에서 다른 Mark-and-sweep 알고리즘 등을 함께 사용하는 경우가 많습니다. 이를 통해 Memory Fragmentation같은 문제점을 해결할 수 있습니다.
