@@ -37,3 +37,13 @@ JVM에서 적용할 수 있는 가비지 컬렉터의 종류와 내부 동작 �
     - ***Q. Generationl Algorithm은 무엇일까요?***
         
         Generational Argorithm은 Heap 영역을 Young, Survivor, Old으로 나눠 GC하는 알고리즘입니다. Heap을 age별로 sub heap으로 나누고 그 중 Youngest generation sub heap을 자주 GC하는 방식이죠. Generationl Algorithm은 각 Sub-heap에서 다른 Mark-and-sweep 알고리즘 등을 함께 사용하는 경우가 많습니다. 이를 통해 Memory Fragmentation같은 문제점을 해결할 수 있습니다.
+        
+- ***Q. Hotspot JVM 기준으로 어떤 Garbager Collector들이 있을까요? 각 Garbage Collector들의 특징과 장단점은 무엇일까요?***
+    
+    Hotspot JVM 기준 최소 Serial Collector, Parallel Collector, CMS Collector, Garbage First Collector 등이 존재합니다. 
+    
+    - Serial Collector는 1개의 CPU를 사용하는 GC로 코어 수가 적은 경우 적합한 선택지일 확률이 높습니다. 필요한 동작이 많은 CMS, G1 GC 대비 가장 간단한 작업으로 GC가 가능합니다. 다만 CPU를 하나만 사용하는 만큼 GC 동작 시 다른 작업을 수행할 수 없으므로 동시성이 떨어집니다.
+    - Parallel Collector는 Serial Collector의 동시성 문제를 해결합니다. 멀티스레드 기반으로 동작하며 처리율(Throughput)에 최적화되어 있습니다. 멀티스레드 기반이기에 Server Class의 Default GC이며 CPU가 1개인 경우 동작하지 않습니다.
+    - CMS Collector는 Serial, Parallel Collector에서 발생하는 Old 영역의 STW 시간을 최대한 줄이기 위한 테뉴어드(Old) 전용 Garbage Collector입니다. 대신 GC 수행 시 Initial Mark, Remark 때 STW가 반드시 2번 발생합니다. GC 사이클과 동시에 애플리케이션 스레드가 동작하기 때문에 처리율이 일시적으로 감소합니다. 또한 Compaction 과정이 없어 Memory Fragmentation와 같은 문제가 발생할 수도 있습니다. 
+        
+    - G1 Collector는 CMS Collector를 대체하기 위한 나온 Low-Pause & Concurrent Garbage Collector 입니다. 대용량 메모리를 가지는 멀티프로세싱 머신을 대상으로 하고 있습니다. 지금까지 소개된 Garbage Collector들과 가장 큰 차이점은 객체 할당 방식입니다. 영 세대, 올드 세대가 존재하긴 하지만 세대별로 연속적으로 메모리에 배치되지는 않습니다. 이전처럼 세대가 아닌 Region으로 구성됩니다. 메모리 수집 시에는 Region들에 대한 메모리의 할당률을 SATB를 통해 파악하고 있다가 효율적으로 메모리를 확보할 수 있는 것들을 **우선적으로** 수집합니다
